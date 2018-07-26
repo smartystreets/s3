@@ -19,6 +19,7 @@ type BucketKeyFixture struct {
 func (this *BucketKeyFixture) TestPathStyle() {
 	this.assertBucketKey("", "", "")
 	this.assertBucketKey("https://s3.amazonaws.com/", "", "")
+	this.assertBucketKey("https://s3.amazonaws.com/bucket", "bucket", "")
 	this.assertBucketKey("https://s3.amazonaws.com/bucket/k/e/y", "bucket", "k/e/y")
 	this.assertBucketKey("https://s3-us-west-1.amazonaws.com/bucket/k/e/y", "bucket", "k/e/y")
 	this.assertBucketKey("https://bucket.s3.amazonaws.com/k/e/y", "bucket", "k/e/y")
