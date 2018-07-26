@@ -54,7 +54,7 @@ func IfNoneMatch(etag string) Option {
 	}
 }
 
-// ExpireTime specifies an expiration for the generated request:
+// ExpireTime specifies an expiration for the generated request.
 // This option applies to functions/methods that generate *http.Request.
 func ExpireTime(validity time.Duration) Option {
 	return func(in interface{}) {
@@ -63,6 +63,66 @@ func ExpireTime(validity time.Duration) Option {
 			t.ExpireTime = validity
 		case s3.PutObjectRequest:
 			t.ExpireTime = validity
+		}
+	}
+}
+
+// ServerSideEncryption specifies the server-side encryption algorithm to use.
+// This option only applies to SignedPutRequest.
+func ServerSideEncryption(algorithm s3.ServerSideEncryption) Option {
+	return func(in interface{}) {
+		switch t := in.(type) {
+		case s3.PutObjectRequest:
+			t.Input.ServerSideEncryption = algorithm
+		}
+	}
+}
+
+const (
+	ServerSideEncryptionAES256 = s3.ServerSideEncryptionAes256
+	ServerSideEncryptionAWSKMS = s3.ServerSideEncryptionAwsKms
+)
+
+// ContentType specifies the Content Type of the payload/blob.
+// This option only applies to SignedPutRequest.
+func ContentType(value string) Option {
+	return func(in interface{}) {
+		switch t := in.(type) {
+		case s3.PutObjectRequest:
+			t.Input.ContentType = aws.String(value)
+		}
+	}
+}
+
+// ContentLength specifies the Content Length in bytes of the payload/blob.
+// This option only applies to SignedPutRequest.
+func ContentLength(value int64) Option {
+	return func(in interface{}) {
+		switch t := in.(type) {
+		case s3.PutObjectRequest:
+			t.Input.ContentLength = aws.Int64(value)
+		}
+	}
+}
+
+// ContentMD5 specifies the MD5 checksum of the payload/blob.
+// This option only applies to SignedPutRequest.
+func ContentMD5(value string) Option {
+	return func(in interface{}) {
+		switch t := in.(type) {
+		case s3.PutObjectRequest:
+			t.Input.ContentMD5 = aws.String(value)
+		}
+	}
+}
+
+// ContentEncoding specifies the content encoding of the payload/blob.
+// This option only applies to SignedPutRequest.
+func ContentEncoding(value string) Option {
+	return func(in interface{}) {
+		switch t := in.(type) {
+		case s3.PutObjectRequest:
+			t.Input.ContentEncoding = aws.String(value)
 		}
 	}
 }

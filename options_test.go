@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -41,4 +42,30 @@ func (this *OptionsFixture) TestSignedPut_ExpireTimeForcesCreationOfSignatureInQ
 func (this *OptionsFixture) TestIfNoneMatchAddHeader() {
 	request, _ := SignedGetRequest("bucket", "key", IfNoneMatch("etag"))
 	this.So(request.Header.Get("If-None-Match"), should.Equal, "etag")
+}
+
+func (this *OptionsFixture) TestServerSideEncryption() {
+	put, _ := SignedPutRequest("bucket", "key", strings.NewReader("hi"), ServerSideEncryption(ServerSideEncryptionAES256))
+	this.So(put.Header.Get("x-amz-server-side-encryption"), should.Equal, ServerSideEncryptionAES256)
+}
+
+func (this *OptionsFixture) TestContentType() {
+	put, _ := SignedPutRequest("bucket", "key", strings.NewReader("hi"), ContentType("application/boink"))
+	this.So(put.Header.Get("Content-Type"), should.Equal, "application/boink")
+}
+
+func (this *OptionsFixture) TestContentEncoding() {
+	put, _ := SignedPutRequest("bucket", "key", strings.NewReader("hi"), ContentEncoding("utf-8"))
+	this.So(put.Header.Get("Content-Encoding"), should.Equal, "utf-8")
+}
+
+func (this *OptionsFixture) TestContentMD5() {
+	put, _ := SignedPutRequest("bucket", "key", strings.NewReader("hi"), ContentMD5("abcdef01"))
+	this.So(put.Header.Get("Content-MD5"), should.Equal, "abcdef01")
+}
+
+func (this *OptionsFixture) TestContentLength() {
+	put, _ := SignedPutRequest("bucket", "key", strings.NewReader("hi"), ContentLength(42))
+	this.So(put.ContentLength, should.Equal, 42)
+	this.So(put.Header.Get("Content-Length"), should.Equal, "42")
 }
