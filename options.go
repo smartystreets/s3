@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
@@ -28,11 +29,12 @@ func Bucket(value string) Option {
 
 // Key allows the user to specify the key for sending requests.
 func Key(value string) Option {
-	return func(in *inputModel) { in.key = &value }
+	return func(in *inputModel) { in.key = aws.String(TrimKey(value)) }
 }
 
-// ResourceURL allows the user to specify the region, bucket, and key for sending requests from the provided S3 URL.
-func ResourceURL(value *url.URL) Option {
+// StorageAddress allows the user to specify the region, bucket, and/or key
+// for sending requests from the provided S3 URL.
+func StorageAddress(value *url.URL) Option {
 	region, bucket, key := RegionBucketKey(value)
 	return func(in *inputModel) {
 		if len(region) > 0 {
@@ -71,12 +73,18 @@ func ExpireTime(value time.Duration) Option {
 
 // ContentString specifies the PUT request payload from a string.
 func ContentString(value string) Option {
-	return func(in *inputModel) { in.content = strings.NewReader(value) }
+	return func(in *inputModel) {
+		in.content = strings.NewReader(value)
+		in.contentLength = aws.Int64(int64(len(value)))
+	}
 }
 
 // ContentBytes specifies the PUT request payload from a slice of bytes.
 func ContentBytes(value []byte) Option {
-	return func(in *inputModel) { in.content = bytes.NewReader(value) }
+	return func(in *inputModel) {
+		in.content = bytes.NewReader(value)
+		in.contentLength = aws.Int64(int64(len(value)))
+	}
 }
 
 // Content specifies the PUT request payload from an io.ReadSeeker.

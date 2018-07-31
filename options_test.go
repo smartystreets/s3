@@ -73,6 +73,13 @@ func (this *OptionsFixture) TestHardCodedCredentials() {
 	this.So(request.Header.Get("Authorization"), should.ContainSubstring, "Credential=access")
 }
 
+func (this *OptionsFixture) TestBucketAndKey() {
+	request, err := NewRequest(GET, Bucket("bucket"), Key("/key/"))
+	this.So(err, should.BeNil)
+	this.So(request.URL.Host, should.ContainSubstring, "bucket")
+	this.So(request.URL.Path, should.ContainSubstring, "key")
+}
+
 func (this *OptionsFixture) TestSignedGet_ExpireTimeForcesCreationOfSignatureInQueryString() {
 	requestWithExpiration, _ := NewRequest(GET, Bucket("bucket"), Key("key"), ExpireTime(time.Second*30))
 	requestWithoutExpiration, _ := NewRequest(GET, Bucket("bucket"), Key("key"))
@@ -124,6 +131,14 @@ func (this *OptionsFixture) TestPUT_ContentBytes() {
 	put, _ := NewRequest(PUT, Bucket("bucket"), Key("key"), ContentBytes([]byte("hi")))
 	all, _ := ioutil.ReadAll(put.Body)
 	this.So(string(all), should.Equal, "hi")
+	this.So(put.Header.Get("Content-Length"), should.Equal, "2")
+}
+
+func (this *OptionsFixture) TestPUT_ContentString() {
+	put, _ := NewRequest(PUT, Bucket("bucket"), Key("key"), ContentString("hi"))
+	all, _ := ioutil.ReadAll(put.Body)
+	this.So(string(all), should.Equal, "hi")
+	this.So(put.Header.Get("Content-Length"), should.Equal, "2")
 }
 
 func (this *OptionsFixture) TestPUT_Content() {
@@ -134,6 +149,12 @@ func (this *OptionsFixture) TestPUT_Content() {
 
 func (this *OptionsFixture) TestResourceURL() {
 	address := &url.URL{Scheme: "https", Host: "bucket.s3.us-west-1.amazonaws.com", Path: "/key", RawPath: "/key"}
-	request, _ := NewRequest(GET, ResourceURL(address))
+	request, _ := NewRequest(GET, StorageAddress(address))
 	this.So(request.URL, should.Resemble, address)
+}
+
+func (this *OptionsFixture) TestResourceURLWithKeyAsSeparateOptions() {
+	address := &url.URL{Scheme: "https", Host: "bucket.s3.us-west-1.amazonaws.com"}
+	request, _ := NewRequest(GET, StorageAddress(address), Key("key"))
+	this.So(request.URL.String(), should.Equal, "https://bucket.s3.us-west-1.amazonaws.com/key")
 }
