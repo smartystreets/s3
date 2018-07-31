@@ -24,13 +24,19 @@ func TrimKey(key string) string {
 // path-style bucket, with region:    http://       s3-aws-region.amazonaws.com/bucket
 func RegionBucketKey(address *url.URL) (region, bucket, key string) {
 	bucket, key = BucketKey(address)
-	return extractRegion(address.Host), bucket, key
+	if address != nil {
+		region = extractRegion(address.Host)
+	}
+	return region, bucket, key
 }
 
 // BucketKey returns the S3 bucket and key embedded in an S3 URL.
 // For details on how s3 urls are formed, please see the S3 docs:
 // https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html
 func BucketKey(address *url.URL) (bucket, key string) {
+	if address == nil {
+		return "", ""
+	}
 	if isPathStyleAddress(address.Host) {
 		path := TrimKey(address.Path)
 		elements := strings.Split(path, "/")
