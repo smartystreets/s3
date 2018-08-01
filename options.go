@@ -17,10 +17,10 @@ import (
 // of custom/conditional options.
 type Option func(in *inputModel)
 
-// Composite allows multiple options to appear as one. This is handy
+// CompositeOption allows multiple options to appear as one. This is handy
 // when some options are unchanging (like credentials or a bucket name).
 // Bundle them together in a single option to leave more room for the dynamic options.
-func Composite(options ...Option) Option {
+func CompositeOption(options ...Option) Option {
 	return func(in *inputModel) {
 		in.applyOptions(options)
 	}
