@@ -32,11 +32,15 @@ type inputModel struct {
 }
 
 func newInput(method string, options []Option) *inputModel {
-	request := &inputModel{method: method}
+	in := &inputModel{method: method}
+	in.applyOptions(options)
+	return in
+}
+
+func (this *inputModel) applyOptions(options []Option) {
 	for _, option := range options {
-		option(request)
+		option(this)
 	}
-	return request
 }
 
 func (this *inputModel) validate() error {
