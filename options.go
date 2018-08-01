@@ -17,6 +17,9 @@ import (
 // of custom/conditional options.
 type Option func(in *inputModel)
 
+// Nop is a no-op. Useful as a placeholder in certain situations.
+func Nop(_ *inputModel) {}
+
 // Region allows the user to specify the region for sending requests.
 func Region(value string) Option {
 	return func(in *inputModel) { in.region = external.WithRegion(value) }
