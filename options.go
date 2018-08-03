@@ -17,6 +17,9 @@ import (
 // of custom/conditional options.
 type Option func(in *inputModel)
 
+// Nop is a no-op. Useful as a placeholder in certain situations.
+func Nop(_ *inputModel) {}
+
 // CompositeOption allows multiple options to appear as one. This is handy
 // when some options are unchanging (like credentials or a bucket name).
 // Bundle them together in a single option to leave more room for the dynamic options.
@@ -25,9 +28,6 @@ func CompositeOption(options ...Option) Option {
 		in.applyOptions(options)
 	}
 }
-
-// Nop is a no-op. Useful as a placeholder in certain situations.
-func Nop(_ *inputModel) {}
 
 // Region allows the user to specify the region for sending requests.
 func Region(value string) Option {
