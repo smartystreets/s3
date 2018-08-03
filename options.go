@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -41,7 +42,13 @@ func Bucket(value string) Option {
 
 // Key allows the user to specify the key for sending requests.
 func Key(value string) Option {
-	return func(in *inputModel) { in.key = aws.String(TrimKey(value)) }
+	return func(in *inputModel) {
+		if in.key == nil {
+			in.key = aws.String(TrimKey(value))
+		} else {
+			in.key = aws.String(path.Join(*in.key, value))
+		}
+	}
 }
 
 // StorageAddress allows the user to specify the region, bucket, and/or key

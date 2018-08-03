@@ -158,3 +158,13 @@ func (this *OptionsFixture) TestResourceURLWithKeyAsSeparateOptions() {
 	request, _ := NewRequest(GET, StorageAddress(address), Key("key"))
 	this.So(request.URL.String(), should.Equal, "https://bucket.s3.us-west-1.amazonaws.com/key")
 }
+
+func (this *OptionsFixture) TestMultipleKeysAreCombinedAsPathElements() {
+	address := &url.URL{Scheme: "https", Host: "bucket.s3.us-west-1.amazonaws.com", Path: "/a/"}
+	request, _ := NewRequest(GET,
+		StorageAddress(address), // This option will include Key("/a/").
+		Key("/b/"),
+		Key("/c/"),
+	)
+	this.So(request.URL.Path, should.Equal, "/a/b/c")
+}
