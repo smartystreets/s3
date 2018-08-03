@@ -39,7 +39,9 @@ func newInput(method string, options []Option) *inputModel {
 
 func (this *inputModel) applyOptions(options []Option) {
 	for _, option := range options {
-		option(this)
+		if option != nil {
+			option(this)
+		}
 	}
 }
 

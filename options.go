@@ -48,16 +48,19 @@ func Key(value string) Option {
 // for sending requests from the provided S3 URL.
 func StorageAddress(value *url.URL) Option {
 	region, bucket, key := RegionBucketKey(value)
-	return func(in *inputModel) {
-		if len(region) > 0 {
-			in.region = external.WithRegion(region)
-		}
-		if len(bucket) > 0 {
-			in.bucket = &bucket
-		}
-		if len(key) > 0 {
-			in.key = &key
-		}
+	return CompositeOption(
+		ConditionalOption(Region(region), len(region) > 0),
+		ConditionalOption(Bucket(bucket), len(bucket) > 0),
+		ConditionalOption(Key(key), len(key) > 0),
+	)
+}
+
+// ConditionalOption returns the option if condition == true, otherwise returns nil (nop).
+func ConditionalOption(option Option, condition bool) Option {
+	if condition {
+		return option
+	} else {
+		return nil
 	}
 }
 
