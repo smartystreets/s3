@@ -54,8 +54,9 @@ func Key(value string) Option {
 // StorageAddress allows the user to specify the region, bucket, and/or key
 // for sending requests from the provided S3 URL.
 func StorageAddress(value *url.URL) Option {
-	region, bucket, key := RegionBucketKey(value)
+	endpoint, region, bucket, key := EndpointRegionBucketKey(value)
 	return CompositeOption(
+		ConditionalOption(Endpoint(endpoint), len(endpoint) > 0),
 		ConditionalOption(Region(region), len(region) > 0),
 		ConditionalOption(Bucket(bucket), len(bucket) > 0),
 		ConditionalOption(Key(key), len(key) > 0),

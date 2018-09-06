@@ -155,13 +155,19 @@ func (this *OptionsFixture) TestPUT_Content() {
 	this.So(string(all), should.Equal, "hi")
 }
 
-func (this *OptionsFixture) TestResourceURL() {
+func (this *OptionsFixture) TestStorageAddress() {
 	address := &url.URL{Scheme: "https", Host: "bucket.s3.us-west-1.amazonaws.com", Path: "/key", RawPath: "/key"}
 	request, _ := NewRequest(GET, StorageAddress(address))
 	this.So(request.URL, should.Resemble, address)
 }
 
-func (this *OptionsFixture) TestResourceURLWithKeyAsSeparateOptions() {
+func (this *OptionsFixture) TestStorageAddress_AlternateEndpoint() {
+	address := &url.URL{Scheme: "https", Host: "1.2.3.4", Path: "/bucket/key", RawPath: "/bucket/key"}
+	request, _ := NewRequest(GET, StorageAddress(address))
+	this.So(request.URL, should.Resemble, address)
+}
+
+func (this *OptionsFixture) TestStorageAddressWithKeyAsSeparateOptions() {
 	address := &url.URL{Scheme: "https", Host: "bucket.s3.us-west-1.amazonaws.com"}
 	request, _ := NewRequest(GET, StorageAddress(address), Key("key"))
 	this.So(request.URL.String(), should.Equal, "https://bucket.s3.us-west-1.amazonaws.com/key")

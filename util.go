@@ -12,22 +12,26 @@ func TrimKey(key string) string {
 	return strings.Trim(key, "/")
 }
 
-// RegionBucketKey returns the S3 region, bucket, and key embedded in an S3 URL.
+// EndpointRegionBucketKey returns the S3 endpoint, region, bucket, and key embedded in a URL.
 // For details on how S3 urls are formed, please see the S3 docs:
 // https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html
 //
 // S3 URL examples showing optional placement of bucket and region (whitespace added for alignment):
 //
-// virtual-style bucket, no region:   http://bucket.s3           .amazonaws.com
-// virtual-style bucket, with region: http://bucket.s3-aws-region.amazonaws.com
-// path-style bucket, no region:      http://       s3           .amazonaws.com/bucket
-// path-style bucket, with region:    http://       s3-aws-region.amazonaws.com/bucket
-func RegionBucketKey(address *url.URL) (region, bucket, key string) {
+// virtual-style bucket, no region:    http://bucket.s3           .amazonaws.com
+// virtual-style bucket, with region:  http://bucket.s3-aws-region.amazonaws.com
+// path-style bucket, no region:       http://       s3           .amazonaws.com/bucket
+// path-style bucket, with region:     http://       s3-aws-region.amazonaws.com/bucket
+// path-style bucket, custom endpoint: http://                       42.43.44.45/bucket
+func EndpointRegionBucketKey(address *url.URL) (endpoint, region, bucket, key string) {
 	bucket, key = BucketKey(address)
 	if address != nil {
 		region = extractRegion(address.Host)
+		if !strings.Contains(address.Host, "s3") {
+			endpoint = address.Scheme + "://" + address.Host
+		}
 	}
-	return region, bucket, key
+	return endpoint, region, bucket, key
 }
 
 // BucketKey returns the S3 bucket and key embedded in an S3 URL.
@@ -52,7 +56,7 @@ func BucketKey(address *url.URL) (bucket, key string) {
 }
 
 func isPathStyleAddress(host string) bool {
-	return strings.HasPrefix(host, "s3.") || strings.HasPrefix(host, "s3-")
+	return !strings.Contains(host, "s3") || strings.HasPrefix(host, "s3.") || strings.HasPrefix(host, "s3-")
 }
 
 func extractVirtualBucket(host string) string {

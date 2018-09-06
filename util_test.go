@@ -8,34 +8,39 @@ import (
 	"github.com/smartystreets/gunit"
 )
 
-func TestBucketKeyFixture(t *testing.T) {
-	gunit.Run(new(BucketKeyFixture), t)
+func TestParsingFixture(t *testing.T) {
+	gunit.Run(new(ParsingFixture), t)
 }
 
-type BucketKeyFixture struct {
+type ParsingFixture struct {
 	*gunit.Fixture
 }
 
-func parseURL(input string) *url.URL {
-	parsed, _ := url.Parse(input)
+func URL(urlWithoutScheme string) (parsed *url.URL) {
+	if len(urlWithoutScheme) > 0 {
+		parsed, _ = url.Parse("https:"+urlWithoutScheme)
+	}
 	return parsed
 }
 
-func (this *BucketKeyFixture) assertRegionBucketKey(input *url.URL, expectedRegion, expectedBucket, expectedKey string) {
-	region, bucket, key := RegionBucketKey(input)
+func (this *ParsingFixture) assertFields(input *url.URL, expectedEndpoint, expectedRegion, expectedBucket, expectedKey string) {
+	endpoint, region, bucket, key := EndpointRegionBucketKey(input)
+	this.So(endpoint, should.Equal, expectedEndpoint)
 	this.So(region, should.Equal, expectedRegion)
 	this.So(bucket, should.Equal, expectedBucket)
 	this.So(key, should.Equal, expectedKey)
 }
 
-func (this *BucketKeyFixture) Test() {
-	this.assertRegionBucketKey(nil, "", "", "")
-	this.assertRegionBucketKey(parseURL(""), "", "", "")
-	this.assertRegionBucketKey(parseURL("https://s3.amazonaws.com"), "", "", "")
-	this.assertRegionBucketKey(parseURL("https://s3.amazonaws.com/bucket"), "", "bucket", "")
-	this.assertRegionBucketKey(parseURL("https://s3.amazonaws.com/bucket/key"), "", "bucket", "key")
-	this.assertRegionBucketKey(parseURL("https://s3.amazonaws.com/bucket/k/e/y"), "", "bucket", "k/e/y")
-	this.assertRegionBucketKey(parseURL("https://s3-region.amazonaws.com/bucket/key"), "region", "bucket", "key")
-	this.assertRegionBucketKey(parseURL("https://bucket.s3.amazonaws.com/key"), "", "bucket", "key")
-	this.assertRegionBucketKey(parseURL("https://bucket.s3-region.amazonaws.com/key"), "region", "bucket", "key")
+func (this *ParsingFixture) Test() {
+	this.assertFields(nil, "", "", "", "")
+	this.assertFields(URL(""), "", "", "", "")
+	this.assertFields(URL("//s3.amazonaws.com"), "", "", "", "")
+	this.assertFields(URL("//s3.amazonaws.com/bucket"), "", "", "bucket", "")
+	this.assertFields(URL("//s3.amazonaws.com/bucket/key"), "", "", "bucket", "key")
+	this.assertFields(URL("//s3.amazonaws.com/bucket/k/e/y"), "", "", "bucket", "k/e/y")
+	this.assertFields(URL("//s3-region.amazonaws.com/bucket/key"), "", "region", "bucket", "key")
+	this.assertFields(URL("//bucket.s3.amazonaws.com/key"), "", "", "bucket", "key")
+	this.assertFields(URL("//bucket.s3-region.amazonaws.com/key"), "", "region", "bucket", "key")
+	this.assertFields(URL("//localhost/bucket/key"), "https://localhost", "", "bucket", "key")
+	this.assertFields(URL("//1.2.3.4:5678/bucket/key"), "https://1.2.3.4:5678", "", "bucket", "key")
 }
