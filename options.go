@@ -55,6 +55,10 @@ func Key(value string) Option {
 // for sending requests from the provided S3 URL.
 func StorageAddress(value *url.URL) Option {
 	endpoint, region, bucket, key := EndpointRegionBucketKey(value)
+	if len(endpoint) > 0 && len(region) == 0 {
+		region = "us-east-1"
+	}
+
 	return CompositeOption(
 		ConditionalOption(Endpoint(endpoint), len(endpoint) > 0),
 		ConditionalOption(Region(region), len(region) > 0),
