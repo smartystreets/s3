@@ -62,6 +62,7 @@ func StorageAddress(value *url.URL) Option {
 	)
 }
 
+// Endpoint allows the user to specify an alternate s3-compatible endpoint/URL to use for signed requests.
 func Endpoint(value string) Option {
 	return func(in *inputModel) { in.endpoint = value }
 }
