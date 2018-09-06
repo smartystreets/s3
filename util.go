@@ -27,7 +27,7 @@ func EndpointRegionBucketKey(address *url.URL) (endpoint, region, bucket, key st
 	bucket, key = BucketKey(address)
 	if address != nil {
 		region = extractRegion(address.Host)
-		if !strings.Contains(address.Host, "s3") {
+		if isAlternateEndpoint(address.Host) {
 			endpoint = address.Scheme + "://" + address.Host
 		}
 	}
@@ -55,8 +55,11 @@ func BucketKey(address *url.URL) (bucket, key string) {
 	return bucket, key
 }
 
+func isAlternateEndpoint(host string) bool {
+	return !strings.HasSuffix(host, ".amazonaws.com")
+}
 func isPathStyleAddress(host string) bool {
-	return !strings.Contains(host, "s3") || strings.HasPrefix(host, "s3.") || strings.HasPrefix(host, "s3-")
+	return isAlternateEndpoint(host) || strings.HasPrefix(host, "s3.") || strings.HasPrefix(host, "s3-")
 }
 
 func extractVirtualBucket(host string) string {

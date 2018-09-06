@@ -41,6 +41,7 @@ func (this *ParsingFixture) Test() {
 	this.assertFields(URL("//s3-region.amazonaws.com/bucket/key"), "", "region", "bucket", "key")
 	this.assertFields(URL("//bucket.s3.amazonaws.com/key"), "", "", "bucket", "key")
 	this.assertFields(URL("//bucket.s3-region.amazonaws.com/key"), "", "region", "bucket", "key")
+	this.assertFields(URL("//s3/bucket/key"), "https://s3", "", "bucket", "key")
 	this.assertFields(URL("//localhost/bucket/key"), "https://localhost", "", "bucket", "key")
 	this.assertFields(URL("//1.2.3.4:5678/bucket/key"), "https://1.2.3.4:5678", "", "bucket", "key")
 }
