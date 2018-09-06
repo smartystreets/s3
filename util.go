@@ -71,4 +71,3 @@ func extractRegion(host string) string {
 	}
 	return host[regionBegin:regionEnd]
 }
-

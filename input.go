@@ -49,7 +49,7 @@ func (this *inputModel) validate() error {
 	if this.method != GET && this.method != PUT {
 		return ErrInvalidRequestMethod
 	}
-	if this.bucket == nil || len(*this.bucket) == 0{
+	if this.bucket == nil || len(*this.bucket) == 0 {
 		return ErrBucketMissing
 	}
 	if this.key == nil || len(*this.key) == 0 {
