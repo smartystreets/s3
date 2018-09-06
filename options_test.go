@@ -80,6 +80,14 @@ func (this *OptionsFixture) TestBucketAndKey() {
 	this.So(request.URL.Path, should.ContainSubstring, "key")
 }
 
+func (this *OptionsFixture) TestEndpoint() {
+	request, err := NewRequest(GET, Endpoint("http://localhost:9000"), Bucket("bucket"), Key("key"))
+	this.So(err, should.BeNil)
+	this.So(request.URL.Scheme, should.Equal, "http")
+	this.So(request.URL.Host, should.Equal, "localhost:9000")
+	this.So(request.URL.Path, should.Equal, "/bucket/key")
+}
+
 func (this *OptionsFixture) TestSignedGet_ExpireTimeForcesCreationOfSignatureInQueryString() {
 	requestWithExpiration, _ := NewRequest(GET, Bucket("bucket"), Key("key"), ExpireTime(time.Second*30))
 	requestWithoutExpiration, _ := NewRequest(GET, Bucket("bucket"), Key("key"))

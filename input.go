@@ -16,6 +16,7 @@ type inputModel struct {
 
 	credentials external.WithCredentialsValue
 	region      external.WithRegion
+	endpoint    string
 
 	bucket *string
 	key    *string
@@ -66,7 +67,12 @@ func (this *inputModel) buildClient() error {
 	if err != nil {
 		return err
 	}
+
 	this.client = s3.New(config)
+	if len(this.endpoint) > 0 {
+		this.client.ForcePathStyle = true
+	}
+
 	return nil
 }
 
@@ -78,7 +84,17 @@ func (this *inputModel) buildConfig() (aws.Config, error) {
 	if len(this.region) > 0 {
 		configs = append(configs, external.WithRegion(this.region))
 	}
-	return external.LoadDefaultAWSConfig(configs...)
+
+	config, err := external.LoadDefaultAWSConfig(configs...)
+	if err != nil {
+		return aws.Config{}, err
+	}
+
+	if len(this.endpoint) > 0 {
+		config.EndpointResolver = aws.ResolveWithEndpointURL(this.endpoint)
+	}
+
+	return config, err
 }
 
 func (this *inputModel) buildAWSRequest() (request *aws.Request) {

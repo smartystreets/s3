@@ -62,6 +62,10 @@ func StorageAddress(value *url.URL) Option {
 	)
 }
 
+func Endpoint(value string) Option {
+	return func(in *inputModel) { in.endpoint = value }
+}
+
 // ConditionalOption returns the option if condition == true, otherwise returns nil (nop).
 func ConditionalOption(option Option, condition bool) Option {
 	if condition {
