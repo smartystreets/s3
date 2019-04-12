@@ -7,16 +7,16 @@ import (
 	"path"
 	"strings"
 	"time"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/external"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 // Option defines a callback for configuring the service and subsequent requests.
 // It's important that this remain an exported name so that users can create slices
 // of custom/conditional options.
 type Option func(in *inputModel)
+
+func method_(value string) Option {
+	return func(in *inputModel) { in.method = value }
+}
 
 // Nop is a no-op. Useful as a placeholder in certain situations.
 func Nop(_ *inputModel) {}
@@ -32,21 +32,21 @@ func CompositeOption(options ...Option) Option {
 
 // Region allows the user to specify the region for sending requests.
 func Region(value string) Option {
-	return func(in *inputModel) { in.region = external.WithRegion(value) }
+	return func(in *inputModel) { in.region = value }
 }
 
 // Bucket allows the user to specify the bucket for sending requests.
 func Bucket(value string) Option {
-	return func(in *inputModel) { in.bucket = &value }
+	return func(in *inputModel) { in.bucket = value }
 }
 
 // Key allows the user to specify the key for sending requests.
 func Key(value string) Option {
 	return func(in *inputModel) {
-		if in.key == nil {
-			in.key = aws.String(TrimKey(value))
+		if len(in.key) == 0 {
+			in.key = TrimKey(value)
 		} else {
-			in.key = aws.String(path.Join(*in.key, value))
+			in.key = path.Join(in.key, value)
 		}
 	}
 }
@@ -84,10 +84,10 @@ func ConditionalOption(option Option, condition bool) Option {
 // Credentials allows the user to specify hard-coded credential values for sending requests.
 func Credentials(access, secret string) Option {
 	return func(in *inputModel) {
-		in.credentials = external.WithCredentialsValue{
+		in.credentials = append(in.credentials, awsCredentials{
 			AccessKeyID:     access,
 			SecretAccessKey: secret,
-		}
+		})
 	}
 }
 
@@ -95,11 +95,11 @@ func Credentials(access, secret string) Option {
 // https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html#RESTObjectGET-requests-in-headers
 // This option only applies to GET requests.
 func IfNoneMatch(etag string) Option {
-	return func(in *inputModel) { in.etag = &etag }
+	return func(in *inputModel) { in.etag = etag }
 }
 
 // ExpireTime specifies an expiration for the generated input.
-func ExpireTime(value time.Duration) Option {
+func ExpireTime(value time.Time) Option {
 	return func(in *inputModel) { in.expireTime = value }
 }
 
@@ -107,7 +107,7 @@ func ExpireTime(value time.Duration) Option {
 func ContentString(value string) Option {
 	return func(in *inputModel) {
 		in.content = strings.NewReader(value)
-		in.contentLength = aws.Int64(int64(len(value)))
+		in.contentLength = int64(len(value))
 	}
 }
 
@@ -115,7 +115,7 @@ func ContentString(value string) Option {
 func ContentBytes(value []byte) Option {
 	return func(in *inputModel) {
 		in.content = bytes.NewReader(value)
-		in.contentLength = aws.Int64(int64(len(value)))
+		in.contentLength = int64(len(value))
 	}
 }
 
@@ -127,34 +127,36 @@ func Content(value io.ReadSeeker) Option {
 // ContentType specifies the Content Type of the payload/blob.
 // This option only applies to SignedPutRequest.
 func ContentType(value string) Option {
-	return func(in *inputModel) { in.contentType = &value }
+	return func(in *inputModel) { in.contentType = value }
 }
 
 // ContentLength specifies the Content Length in bytes of the payload/blob.
 // This option only applies to SignedPutRequest.
 func ContentLength(value int64) Option {
-	return func(in *inputModel) { in.contentLength = &value }
+	return func(in *inputModel) { in.contentLength = value }
 }
 
 // ContentMD5 specifies the MD5 checksum of the payload/blob.
 // This option only applies to SignedPutRequest.
 func ContentMD5(value string) Option {
-	return func(in *inputModel) { in.contentMD5 = &value }
+	return func(in *inputModel) { in.contentMD5 = value }
 }
 
 // ContentEncoding specifies the content encoding of the payload/blob.
 // This option only applies to SignedPutRequest.
 func ContentEncoding(value string) Option {
-	return func(in *inputModel) { in.contentEncoding = &value }
+	return func(in *inputModel) { in.contentEncoding = value }
 }
 
 // ServerSideEncryption specifies the server-side encryption algorithm to use.
 // This option only applies to SignedPutRequest.
-func ServerSideEncryption(value s3.ServerSideEncryption) Option {
+func ServerSideEncryption(value ServerSideEncryptionValue) Option {
 	return func(in *inputModel) { in.serverSideEncryption = value }
 }
 
+type ServerSideEncryptionValue string
+
 const (
-	ServerSideEncryptionAES256 = s3.ServerSideEncryptionAes256
-	ServerSideEncryptionAWSKMS = s3.ServerSideEncryptionAwsKms
+	ServerSideEncryptionAES256 ServerSideEncryptionValue = "AES256"
+	ServerSideEncryptionAWSKMS ServerSideEncryptionValue = "aws:kms"
 )

@@ -12,12 +12,7 @@ func NewRequest(method string, options ...Option) (*http.Request, error) {
 		return nil, err
 	}
 
-	if err := input.buildClient(); err != nil {
-		return nil, err
-	}
-
-	aws := input.buildAWSRequest()
-	return aws.HTTPRequest, aws.Sign()
+	return input.buildRequest()
 }
 
 const (

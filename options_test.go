@@ -89,7 +89,7 @@ func (this *OptionsFixture) TestEndpoint() {
 }
 
 func (this *OptionsFixture) TestSignedGet_ExpireTimeForcesCreationOfSignatureInQueryString() {
-	requestWithExpiration, _ := NewRequest(GET, Bucket("bucket"), Key("key"), ExpireTime(time.Second*30))
+	requestWithExpiration, _ := NewRequest(GET, Bucket("bucket"), Key("key"), ExpireTime(time.Now()))
 	requestWithoutExpiration, _ := NewRequest(GET, Bucket("bucket"), Key("key"))
 
 	this.So(requestWithExpiration.URL.Query(), should.NotBeEmpty)
@@ -97,7 +97,7 @@ func (this *OptionsFixture) TestSignedGet_ExpireTimeForcesCreationOfSignatureInQ
 }
 
 func (this *OptionsFixture) TestSignedPut_ExpireTimeForcesCreationOfSignatureInQueryString() {
-	requestWithExpiration, _ := NewRequest(PUT, Bucket("bucket"), Key("key"), ContentString("hi"), ExpireTime(time.Second*30))
+	requestWithExpiration, _ := NewRequest(PUT, Bucket("bucket"), Key("key"), ContentString("hi"), ExpireTime(time.Now()))
 	requestWithoutExpiration, _ := NewRequest(PUT, Bucket("bucket"), Key("key"), ContentString("hi"))
 
 	this.So(requestWithExpiration.URL.Query(), should.NotBeEmpty)
