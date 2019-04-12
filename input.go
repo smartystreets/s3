@@ -7,23 +7,23 @@ import (
 )
 
 type inputModel struct {
-	method string
-
 	credentials []awsCredentials
-	region      string
-	endpoint    string
 
-	bucket string
-	key    string
+	method   string
+	endpoint string
+	region   string
+	bucket   string
+	key      string
 
 	expireTime time.Time
 	etag       string
 
-	content              io.ReadSeeker
-	contentType          string
-	contentEncoding      string
-	contentMD5           string
-	contentLength        int64
+	content         io.ReadSeeker
+	contentType     string
+	contentEncoding string
+	contentMD5      string
+	contentLength   int64
+
 	serverSideEncryption ServerSideEncryptionValue
 }
 
