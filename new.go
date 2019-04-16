@@ -12,7 +12,7 @@ func NewRequest(method string, options ...Option) (*http.Request, error) {
 		return nil, err
 	}
 
-	return input.buildRequest()
+	return input.buildAndSignRequest()
 }
 
 const (

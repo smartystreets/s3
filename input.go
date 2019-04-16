@@ -3,6 +3,8 @@ package s3
 import (
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -56,19 +58,72 @@ func (this *inputModel) validate() error {
 	return nil
 }
 
-func (this *inputModel) buildRequest() (request *http.Request, err error) {
+func (this *inputModel) buildAndSignRequest() (request *http.Request, err error) {
 	request, err = http.NewRequest(this.method, this.buildURL(), this.content)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: add headers to request...
-	// TODO: add query string parameters to request...
-	// TODO: Sign request using aws v4 signature...
-
+	this.prepareRequestForSigning(request)
+	request.Header.Set("Authorization", calculateAWSv4Signature(request, this.credentials...))
 	return request, nil
 }
 
+func (this *inputModel) prepareRequestForSigning(request *http.Request) {
+	if request.URL.Path == "" {
+		request.URL.Path += "/"
+	}
+	if this.contentLength > 0 {
+		request.ContentLength = this.contentLength
+	}
+	if len(this.contentType) == 0 {
+		this.contentType = "application/x-www-form-urlencoded; charset=utf-8"
+	}
+	setHeader(request, "Host", request.Host) // This must be included in range of headers to sign
+	setHeader(request, "Content-Length", formatInt64(this.contentLength))
+	setHeader(request, "Content-Encoding", this.contentEncoding)
+	setHeader(request, "Content-Type", this.contentType)
+	setHeader(request, "Content-MD5", this.contentMD5)
+	setHeader(request, "If-None-Match", this.etag)
+	setHeader(request, "X-Amz-Server-Side-Encryption", string(this.serverSideEncryption))
+	setHeader(request, "X-Amz-Security-Token", this.credentials[0].SecurityToken)
+	setHeader(request, "X-Amz-Content-Sha256", hashSHA256(readAndReplaceBody(request)))
+	setHeader(request, "X-Amz-Expires", formatUnixTimeStamp(this.expireTime))
+	setHeader(request, "X-Amz-Date", timestampV4())
+}
 func (this *inputModel) buildURL() string {
-	return "" // TODO: build initial url
+	builder := new(strings.Builder)
+
+	if len(this.endpoint) > 0 {
+		builder.WriteString(this.endpoint)
+	} else {
+		builder.WriteString("https://s3")
+		if len(this.region) > 0 {
+			builder.WriteString("-")
+			builder.WriteString(this.region)
+		}
+		builder.WriteString(".amazonaws.com")
+	}
+
+	if !strings.HasSuffix(builder.String(), "/") {
+		builder.WriteString("/")
+	}
+	builder.WriteString(this.bucket)
+	builder.WriteString("/")
+	builder.WriteString(this.key)
+	return builder.String()
+}
+func setHeader(request *http.Request, key, value string) {
+	if len(value) > 0 || value != "0" {
+		request.Header.Set(key, value)
+	}
+}
+func formatUnixTimeStamp(value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+	return formatInt64(value.Unix())
+}
+func formatInt64(value int64) string {
+	return strconv.FormatInt(value, 10)
 }
