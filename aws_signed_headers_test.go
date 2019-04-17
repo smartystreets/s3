@@ -8,6 +8,10 @@ import (
 	"github.com/smartystreets/gunit"
 )
 
+func init() {
+	runningAWSTestSuite = true
+}
+
 func TestSignedHeadersFixture(t *testing.T) {
 	gunit.Run(new(SignedHeadersFixture), t)
 }

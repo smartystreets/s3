@@ -9,7 +9,9 @@ import (
 func canonicalAndSignedHeaders(original http.Header) (canonical, signed string) {
 	lowercaseKeys := map[string]string{} // map[lowercase]original
 	for key := range original {
-		lowercaseKeys[strings.ToLower(key)] = key
+		if headerEligibleForSigning(key) {
+			lowercaseKeys[strings.ToLower(key)] = key
+		}
 	}
 
 	var sortedKeys []string
@@ -43,3 +45,17 @@ func trimHeaderValue(value string) string {
 	}
 	return value
 }
+
+func headerEligibleForSigning(key string) bool {
+	if runningAWSTestSuite {
+		return true
+	}
+	switch key {
+	case "Content-Type", "Content-Md5", "Host":
+		return true
+	default:
+		return strings.HasPrefix(key, "X-Amz")
+	}
+}
+
+var runningAWSTestSuite bool
