@@ -50,7 +50,7 @@ func readAndReplaceBody(request *http.Request) []byte {
 }
 
 func setHeader(request *http.Request, key, value string) {
-	if len(value) > 0 || value != "0" {
+	if len(value) > 0 || (len(value) > 0 && value != "0") {
 		request.Header.Set(key, value)
 	}
 }
