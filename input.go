@@ -41,6 +41,9 @@ func (this *inputModel) applyOptions(options []Option) *inputModel {
 	if len(this.credentials) == 0 {
 		AmbientCredentials()(this)
 	}
+	if len(this.region) == 0 {
+		Region("us-east-1")(this)
+	}
 	return this
 }
 
@@ -101,7 +104,7 @@ func (this *inputModel) buildURL() string {
 		builder.WriteString(this.endpoint)
 	} else {
 		builder.WriteString("https://s3")
-		if len(this.region) > 0 {
+		if len(this.region) > 0 && this.region != "us-east-1" {
 			builder.WriteString("-")
 			builder.WriteString(this.region)
 		}
