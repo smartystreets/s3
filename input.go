@@ -3,7 +3,6 @@ package s3
 import (
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -39,6 +38,9 @@ func (this *inputModel) applyOptions(options []Option) *inputModel {
 			option(this)
 		}
 	}
+	if len(this.credentials) == 0 {
+		AmbientCredentials()(this)
+	}
 	return this
 }
 
@@ -65,7 +67,8 @@ func (this *inputModel) buildAndSignRequest() (request *http.Request, err error)
 	}
 
 	this.prepareRequestForSigning(request)
-	request.Header.Set("Authorization", calculateAWSv4Signature(request, this.credentials...))
+	signature := calculateAWSv4Signature(this.region, request, this.credentials[0])
+	request.Header.Set("Authorization", signature)
 	return request, nil
 }
 
@@ -112,18 +115,4 @@ func (this *inputModel) buildURL() string {
 	builder.WriteString("/")
 	builder.WriteString(this.key)
 	return builder.String()
-}
-func setHeader(request *http.Request, key, value string) {
-	if len(value) > 0 || value != "0" {
-		request.Header.Set(key, value)
-	}
-}
-func formatUnixTimeStamp(value time.Time) string {
-	if value.IsZero() {
-		return ""
-	}
-	return formatInt64(value.Unix())
-}
-func formatInt64(value int64) string {
-	return strconv.FormatInt(value, 10)
 }

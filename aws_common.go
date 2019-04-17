@@ -1,7 +1,6 @@
 package s3
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/hmac"
 	"crypto/md5"
@@ -9,224 +8,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
-	"os"
+	"strconv"
 	"strings"
 	"time"
 )
-
-type metadata struct {
-	algorithm       string
-	credentialScope string
-	signedHeaders   string
-	date            string
-	region          string
-	service         string
-}
-
-const (
-	envAccessKey       = "AWS_ACCESS_KEY"
-	envAccessKeyID     = "AWS_ACCESS_KEY_ID"
-	envSecretKey       = "AWS_SECRET_KEY"
-	envSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
-	envSecurityToken   = "AWS_SECURITY_TOKEN"
-)
-
-type awsLocation struct {
-	ec2     bool
-	checked bool
-}
-
-var location *awsLocation
-
-// serviceAndRegion parsers a hostname to find out which ones it is.
-// http://docs.aws.amazon.com/general/latest/gr/rande.html
-func serviceAndRegion(host string) (service string, region string) {
-	// These are the defaults if the hostname doesn't suggest something else
-	region = "us-east-1"
-	service = "s3"
-
-	parts := strings.Split(host, ".")
-	if len(parts) == 4 {
-		// Either service.region.amazonaws.com or virtual-host.region.amazonaws.com
-		if parts[1] == "s3" {
-			service = "s3"
-		} else if strings.HasPrefix(parts[1], "s3-") {
-			region = parts[1][3:]
-			service = "s3"
-		} else {
-			service = parts[0]
-			region = parts[1]
-		}
-	} else if len(parts) == 5 {
-		service = parts[2]
-		region = parts[1]
-	} else {
-		// Either service.amazonaws.com or s3-region.amazonaws.com
-		if strings.HasPrefix(parts[0], "s3-") {
-			region = parts[0][3:]
-		} else {
-			service = parts[0]
-		}
-	}
-
-	if region == "external-1" {
-		region = "us-east-1"
-	}
-
-	return
-}
-
-// newKeys produces a set of credentials based on the environment
-func newKeys() (newCredentials awsCredentials) {
-	// First use credentials from environment variables
-	newCredentials.AccessKeyID = os.Getenv(envAccessKeyID)
-	if newCredentials.AccessKeyID == "" {
-		newCredentials.AccessKeyID = os.Getenv(envAccessKey)
-	}
-
-	newCredentials.SecretAccessKey = os.Getenv(envSecretAccessKey)
-	if newCredentials.SecretAccessKey == "" {
-		newCredentials.SecretAccessKey = os.Getenv(envSecretKey)
-	}
-
-	newCredentials.SecurityToken = os.Getenv(envSecurityToken)
-
-	// If there is no Access Key and you are on EC2, get the key from the role
-	if (newCredentials.AccessKeyID == "" || newCredentials.SecretAccessKey == "") && onEC2() {
-		newCredentials = *getIAMRoleCredentials()
-	}
-
-	// If the key is expiring, get a new key
-	if newCredentials.expired() && onEC2() {
-		newCredentials = *getIAMRoleCredentials()
-	}
-
-	return newCredentials
-}
-
-// checkKeys gets credentials depending on if any were passed in as an argument
-// or it makes new ones based on the environment.
-func chooseKeys(cred []awsCredentials) awsCredentials {
-	if len(cred) == 0 {
-		return newKeys()
-	} else {
-		return cred[0]
-	}
-}
-
-// onEC2 checks to see if the program is running on an EC2 instance.
-// It does this by looking for the EC2 metadata service.
-// This caches that information in a struct so that it doesn't waste time.
-func onEC2() bool {
-	if location == nil {
-		location = &awsLocation{}
-	}
-	if !(location.checked) {
-		c, err := net.DialTimeout("tcp", "169.254.169.254:80", time.Millisecond*100)
-
-		if err != nil {
-			location.ec2 = false
-		} else {
-			_ = c.Close()
-			location.ec2 = true
-		}
-		location.checked = true
-	}
-
-	return location.ec2
-}
-
-// getIAMRoleList gets a list of the roles that are available to this instance
-func getIAMRoleList() []string {
-	var roles []string
-	address := "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
-
-	client := &http.Client{}
-
-	request, err := http.NewRequest("GET", address, nil)
-
-	if err != nil {
-		return roles
-	}
-
-	response, err := client.Do(request)
-
-	if err != nil {
-		return roles
-	}
-	defer func() { _ = response.Body.Close() }()
-
-	scanner := bufio.NewScanner(response.Body)
-	for scanner.Scan() {
-		roles = append(roles, scanner.Text())
-	}
-	return roles
-}
-
-func getIAMRoleCredentials() *awsCredentials {
-	roles := getIAMRoleList()
-
-	if len(roles) < 1 {
-		return &awsCredentials{}
-	}
-
-	// Use the first role in the list
-	role := roles[0]
-
-	address := "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
-
-	// Create the full URL of the role
-	var buffer bytes.Buffer
-	buffer.WriteString(address)
-	buffer.WriteString(role)
-	roleURL := buffer.String()
-
-	// Get the role
-	roleRequest, err := http.NewRequest("GET", roleURL, nil)
-
-	if err != nil {
-		return &awsCredentials{}
-	}
-
-	client := &http.Client{}
-	roleResponse, err := client.Do(roleRequest)
-
-	if err != nil {
-		return &awsCredentials{}
-	}
-	defer func() { _ = roleResponse.Body.Close() }()
-
-	roleBuffer := new(bytes.Buffer)
-	_ , _ = roleBuffer.ReadFrom(roleResponse.Body)
-
-	credentials := awsCredentials{}
-
-	err = json.Unmarshal(roleBuffer.Bytes(), &credentials)
-
-	if err != nil {
-		return &awsCredentials{}
-	}
-
-	return &credentials
-
-}
-
-func augmentRequestQuery(request *http.Request, values url.Values) *http.Request {
-	for key, array := range request.URL.Query() {
-		for _, value := range array {
-			values.Set(key, value)
-		}
-	}
-
-	request.URL.RawQuery = values.Encode()
-
-	return request
-}
 
 func hmacSHA256(key []byte, content string) []byte {
 	mac := hmac.New(sha256.New, key)
@@ -261,15 +49,28 @@ func readAndReplaceBody(request *http.Request) []byte {
 	return payload
 }
 
-func concat(delim string, str ...string) string {
+func setHeader(request *http.Request, key, value string) {
+	if len(value) > 0 || value != "0" {
+		request.Header.Set(key, value)
+	}
+}
+
+func formatUnixTimeStamp(value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+	return formatInt64(value.Unix())
+}
+
+func formatInt64(value int64) string {
+	return strconv.FormatInt(value, 10)
+}
+
+func join(delim string, str ...string) string {
 	return strings.Join(str, delim)
 }
 
-var utcNow = func() time.Time {
-	return time.Now().UTC()
-}
-
-func normuri(uri string) string {
+func normalizeURI(uri string) string {
 	parts := strings.Split(uri, "/")
 	for i := range parts {
 		parts[i] = encodePathFrag(parts[i])
@@ -315,7 +116,7 @@ func shouldEscape(c byte) bool {
 	return true
 }
 
-func normquery(v url.Values) string {
+func normalizeQuery(v url.Values) string {
 	queryString := v.Encode()
 
 	// Go encodes a space as '+' but Amazon requires '%20'. Luckily any '+' in the

@@ -91,6 +91,39 @@ func Credentials(access, secret string) Option {
 	}
 }
 
+// STSCredentials allows the user to specify hard-coded credential values from AWS STS for sending requests.
+func STSCredentials(access, secret, token string, expiration time.Time) Option {
+	return func(in *inputModel) {
+		in.credentials = append(in.credentials, awsCredentials{
+			AccessKeyID:     access,
+			SecretAccessKey: secret,
+			SecurityToken:   token,
+			Expiration:      expiration,
+		})
+	}
+}
+
+// IAMRoleCredentials loads credentials from the EC2 instance's configured IAM role. Only applicable when running on EC2.
+func IAMRoleCredentials() Option {
+	return func(in *inputModel) {
+		in.credentials = append(in.credentials, getIAMRoleCredentials())
+	}
+}
+
+// EnvironmentCredentials loads credentials from common variations of environment variables.
+func EnvironmentCredentials() Option {
+	return func(in *inputModel) {
+		in.credentials = append(in.credentials, loadCredentialsFromEnvironment())
+	}
+}
+
+// AmbientCredentials loads credentials first from the environment, then from any configured IAM role (on EC2).
+func AmbientCredentials() Option {
+	return func(in *inputModel) {
+		in.credentials = append(in.credentials, ambientCredentials())
+	}
+}
+
 // IfNoneMatch specifies the "If-None-Match" header. See the docs for details:
 // https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html#RESTObjectGET-requests-in-headers
 // This option only applies to GET requests.

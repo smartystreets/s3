@@ -16,20 +16,6 @@ type CommonFixture struct {
 	*gunit.Fixture
 }
 
-func (this *CommonFixture) serviceAndRegion(id string) []string {
-	service, region := serviceAndRegion(id)
-	return []string{service, region}
-}
-func (this *CommonFixture) TestServiceAndRegion() {
-	this.So(this.serviceAndRegion("sqs.us-west-2.amazonaws.com"), should.Resemble, []string{"sqs", "us-west-2"})
-	this.So(this.serviceAndRegion("iam.amazonaws.com"), should.Resemble, []string{"iam", "us-east-1"})
-	this.So(this.serviceAndRegion("sns.us-west-2.amazonaws.com"), should.Resemble, []string{"sns", "us-west-2"})
-	this.So(this.serviceAndRegion("bucketname.s3.amazonaws.com"), should.Resemble, []string{"s3", "us-east-1"})
-	this.So(this.serviceAndRegion("s3.amazonaws.com"), should.Resemble, []string{"s3", "us-east-1"})
-	this.So(this.serviceAndRegion("s3-us-west-1.amazonaws.com"), should.Resemble, []string{"s3", "us-west-1"})
-	this.So(this.serviceAndRegion("s3-external-1.amazonaws.com"), should.Resemble, []string{"s3", "us-east-1"})
-}
-
 func (this *CommonFixture) TestHashFunctions() {
 	this.So(hashMD5([]byte("Pretend this is a REALLY long byte array...")), should.Equal, "KbVTY8Vl6VccnzQf1AGOFw==")
 	this.So(hashSHA256([]byte("This is... Sparta!!")), should.Equal,
@@ -49,21 +35,21 @@ func (this *CommonFixture) TestHashFunctions() {
 }
 
 func (this *CommonFixture) TestConcat() {
-	this.So(concat("\n", "Test1", "Test2"), should.Equal, "Test1\nTest2")
-	this.So(concat(".", "Test1"), should.Equal, "Test1")
-	this.So(concat("\t", "1", "2", "3", "4"), should.Equal, "1\t2\t3\t4")
+	this.So(join("\n", "Test1", "Test2"), should.Equal, "Test1\nTest2")
+	this.So(join(".", "Test1"), should.Equal, "Test1")
+	this.So(join("\t", "1", "2", "3", "4"), should.Equal, "1\t2\t3\t4")
 }
 
 func (this *CommonFixture) TestURINormalization() {
 	this.So(
-		normuri("/-._~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"), should.Equal,
+		normalizeURI("/-._~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"), should.Equal,
 		"/-._~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 
-	this.So(normuri("/ /foo"), should.Equal, "/%20/foo")
-	this.So(normuri("/(foo)"), should.Equal, "/%28foo%29")
+	this.So(normalizeURI("/ /foo"), should.Equal, "/%20/foo")
+	this.So(normalizeURI("/(foo)"), should.Equal, "/%28foo%29")
 
 	this.So(
-		normquery(url.Values{"p": []string{" +&;-=._~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"}}),
+		normalizeQuery(url.Values{"p": []string{" +&;-=._~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"}}),
 		should.Equal,
 		"p=%20%2B%26%3B-%3D._~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 }
