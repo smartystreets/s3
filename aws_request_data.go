@@ -45,4 +45,3 @@ func timestampV4() string                     { return utcNow().Format(timeForma
 func timestampDateV4(timestamp string) string { return timestamp[:8] }
 
 const timeFormatV4 = "20060102T150405Z"
-

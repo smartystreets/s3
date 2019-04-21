@@ -18,7 +18,7 @@ type ParsingFixture struct {
 
 func URL(urlWithoutScheme string) (parsed *url.URL) {
 	if len(urlWithoutScheme) > 0 {
-		parsed, _ = url.Parse("https:"+urlWithoutScheme)
+		parsed, _ = url.Parse("https:" + urlWithoutScheme)
 	}
 	return parsed
 }
