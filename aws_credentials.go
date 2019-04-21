@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -27,6 +28,7 @@ func (this *awsCredentials) expired() bool {
 		return false
 	}
 	expireTime := this.Expiration.Add(-4 * time.Minute)
+
 	// if t - 4 mins is before now, true
 	if expireTime.Before(time.Now()) {
 		return true
@@ -111,17 +113,15 @@ func getIAMRoleList() []string {
 	client := &http.Client{}
 
 	request, err := http.NewRequest("GET", address, nil)
-
 	if err != nil {
 		return roles
 	}
 
 	response, err := client.Do(request)
-
 	if err != nil {
 		return roles
 	}
-	defer func() { _ = response.Body.Close() }()
+	defer closeHandle(response.Body)
 
 	scanner := bufio.NewScanner(response.Body)
 	for scanner.Scan() {
@@ -150,18 +150,17 @@ func getIAMRoleCredentials() awsCredentials {
 
 	// Get the role
 	roleRequest, err := http.NewRequest("GET", roleURL, nil)
-
 	if err != nil {
 		return awsCredentials{}
 	}
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: time.Second * 5}
 	roleResponse, err := client.Do(roleRequest)
 
 	if err != nil {
 		return awsCredentials{}
 	}
-	defer func() { _ = roleResponse.Body.Close() }()
+	defer closeHandle(roleResponse.Body)
 
 	roleBuffer := new(bytes.Buffer)
 	_, _ = roleBuffer.ReadFrom(roleResponse.Body)
@@ -169,10 +168,10 @@ func getIAMRoleCredentials() awsCredentials {
 	credentials := awsCredentials{}
 
 	err = json.Unmarshal(roleBuffer.Bytes(), &credentials)
-
 	if err != nil {
 		return awsCredentials{}
 	}
 
 	return credentials
 }
+func closeHandle(closer io.Closer) { _ = closer.Close() }
