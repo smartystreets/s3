@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/url"
 	"strings"
@@ -76,7 +77,7 @@ func (this *OptionsFixture) TestHardCodedCredentials() {
 func (this *OptionsFixture) TestBucketAndKey() {
 	request, err := NewRequest(GET, Bucket("bucket"), Key("/key/"))
 	this.So(err, should.BeNil)
-	this.So(request.URL.Host, should.ContainSubstring, "bucket")
+	this.So(request.URL.Path, should.ContainSubstring, "bucket")
 	this.So(request.URL.Path, should.ContainSubstring, "key")
 }
 
@@ -88,20 +89,13 @@ func (this *OptionsFixture) TestEndpoint() {
 	this.So(request.URL.Path, should.Equal, "/bucket/key")
 }
 
-func (this *OptionsFixture) TestSignedGet_ExpireTimeForcesCreationOfSignatureInQueryString() {
-	requestWithExpiration, _ := NewRequest(GET, Bucket("bucket"), Key("key"), ExpireTime(time.Second*30))
+func (this *OptionsFixture) TestExpireTimeAppearsInHeader() {
+	now := time.Now()
+	requestWithExpiration, _ := NewRequest(GET, Bucket("bucket"), Key("key"), ExpireTime(now))
 	requestWithoutExpiration, _ := NewRequest(GET, Bucket("bucket"), Key("key"))
 
-	this.So(requestWithExpiration.URL.Query(), should.NotBeEmpty)
-	this.So(requestWithoutExpiration.URL.Query(), should.BeEmpty)
-}
-
-func (this *OptionsFixture) TestSignedPut_ExpireTimeForcesCreationOfSignatureInQueryString() {
-	requestWithExpiration, _ := NewRequest(PUT, Bucket("bucket"), Key("key"), ContentString("hi"), ExpireTime(time.Second*30))
-	requestWithoutExpiration, _ := NewRequest(PUT, Bucket("bucket"), Key("key"), ContentString("hi"))
-
-	this.So(requestWithExpiration.URL.Query(), should.NotBeEmpty)
-	this.So(requestWithoutExpiration.URL.Query(), should.BeEmpty)
+	this.So(requestWithExpiration.Header.Get("x-amz-expires"), should.Equal, fmt.Sprint(now.Unix()))
+	this.So(requestWithoutExpiration.Header.Get("x-amz-expires"), should.BeBlank)
 }
 
 func (this *OptionsFixture) TestIfNoneMatchAddHeader() {
@@ -158,19 +152,19 @@ func (this *OptionsFixture) TestPUT_Content() {
 func (this *OptionsFixture) TestStorageAddress() {
 	address := &url.URL{Scheme: "https", Host: "bucket.s3.us-west-1.amazonaws.com", Path: "/key", RawPath: "/key"}
 	request, _ := NewRequest(GET, StorageAddress(address))
-	this.So(request.URL, should.Resemble, address)
+	this.So(request.URL.String(), should.Equal, "https://s3-us-west-1.amazonaws.com/bucket/key")
 }
 
 func (this *OptionsFixture) TestStorageAddress_AlternateEndpoint() {
 	address := &url.URL{Scheme: "https", Host: "1.2.3.4", Path: "/bucket/key", RawPath: "/bucket/key"}
 	request, _ := NewRequest(GET, StorageAddress(address))
-	this.So(request.URL, should.Resemble, address)
+	this.So(request.URL.String(), should.Resemble, address.String())
 }
 
 func (this *OptionsFixture) TestStorageAddressWithKeyAsSeparateOptions() {
 	address := &url.URL{Scheme: "https", Host: "bucket.s3.us-west-1.amazonaws.com"}
 	request, _ := NewRequest(GET, StorageAddress(address), Key("key"))
-	this.So(request.URL.String(), should.Equal, "https://bucket.s3.us-west-1.amazonaws.com/key")
+	this.So(request.URL.String(), should.Equal, "https://s3-us-west-1.amazonaws.com/bucket/key")
 }
 
 func (this *OptionsFixture) TestMultipleKeysAreCombinedAsPathElements() {
@@ -180,5 +174,5 @@ func (this *OptionsFixture) TestMultipleKeysAreCombinedAsPathElements() {
 		Key("/b/"),
 		Key("/c/"),
 	)
-	this.So(request.URL.Path, should.Equal, "/a/b/c")
+	this.So(request.URL.Path, should.EndWith, "/a/b/c")
 }

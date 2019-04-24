@@ -12,12 +12,7 @@ func NewRequest(method string, options ...Option) (*http.Request, error) {
 		return nil, err
 	}
 
-	if err := input.buildClient(); err != nil {
-		return nil, err
-	}
-
-	aws := input.buildAWSRequest()
-	return aws.HTTPRequest, aws.Sign()
+	return input.buildAndSignRequest()
 }
 
 const (
@@ -26,8 +21,8 @@ const (
 )
 
 var (
-	ErrInvalidRequestMethod = errors.New("Invalid method.")
-	ErrBucketMissing        = errors.New("Bucket is required.")
-	ErrKeyMissing           = errors.New("Key is required.")
-	ErrContentMissing       = errors.New("Content is required.")
+	ErrInvalidRequestMethod = errors.New("invalid method")
+	ErrBucketMissing        = errors.New("bucket is required")
+	ErrKeyMissing           = errors.New("key is required")
+	ErrContentMissing       = errors.New("content is required")
 )

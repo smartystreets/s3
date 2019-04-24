@@ -2,58 +2,59 @@ package s3
 
 import (
 	"io"
+	"net/http"
+	"strings"
 	"time"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/external"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 type inputModel struct {
-	client *s3.S3
+	credentials []awsCredentials
 
-	method string
+	method   string
+	endpoint string
+	region   string
+	bucket   string
+	key      string
 
-	credentials external.WithCredentialsValue
-	region      external.WithRegion
-	endpoint    string
+	expireTime time.Time
+	etag       string
 
-	bucket *string
-	key    *string
+	content         io.ReadSeeker
+	contentType     string
+	contentEncoding string
+	contentMD5      string
+	contentLength   int64
 
-	expireTime time.Duration
-	etag       *string
-
-	content              io.ReadSeeker
-	contentType          *string
-	contentEncoding      *string
-	contentMD5           *string
-	contentLength        *int64
-	serverSideEncryption s3.ServerSideEncryption
+	serverSideEncryption ServerSideEncryptionValue
 }
 
 func newInput(method string, options []Option) *inputModel {
-	in := &inputModel{method: method}
-	in.applyOptions(options)
-	return in
+	return new(inputModel).applyOptions(append(options, method_(method)))
 }
 
-func (this *inputModel) applyOptions(options []Option) {
+func (this *inputModel) applyOptions(options []Option) *inputModel {
 	for _, option := range options {
 		if option != nil {
 			option(this)
 		}
 	}
+	if len(this.credentials) == 0 {
+		AmbientCredentials()(this)
+	}
+	if len(this.region) == 0 {
+		Region("us-east-1")(this)
+	}
+	return this
 }
 
 func (this *inputModel) validate() error {
 	if this.method != GET && this.method != PUT {
 		return ErrInvalidRequestMethod
 	}
-	if this.bucket == nil || len(*this.bucket) == 0 {
+	if len(this.bucket) == 0 {
 		return ErrBucketMissing
 	}
-	if this.key == nil || len(*this.key) == 0 {
+	if len(this.key) == 0 {
 		return ErrKeyMissing
 	}
 	if this.method == PUT && this.content == nil {
@@ -62,76 +63,59 @@ func (this *inputModel) validate() error {
 	return nil
 }
 
-func (this *inputModel) buildClient() error {
-	config, err := this.buildConfig()
+func (this *inputModel) buildAndSignRequest() (request *http.Request, err error) {
+	request, err = http.NewRequest(this.method, this.buildURL(), this.content)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	this.client = s3.New(config)
-	if len(this.endpoint) > 0 {
-		this.client.ForcePathStyle = true
-	}
-
-	return nil
+	this.prepareRequestForSigning(request)
+	signature := calculateAWSv4Signature(this.region, request, this.credentials[0])
+	request.Header.Set("Authorization", signature)
+	return request, nil
 }
 
-func (this *inputModel) buildConfig() (aws.Config, error) {
-	var configs []external.Config
-	if this.credentials.AccessKeyID != "" {
-		configs = append(configs, this.credentials)
+func (this *inputModel) prepareRequestForSigning(request *http.Request) {
+	if request.URL.Path == "" {
+		request.URL.Path += "/"
 	}
-	if len(this.region) > 0 {
-		configs = append(configs, external.WithRegion(this.region))
+	if this.contentLength > 0 {
+		request.ContentLength = this.contentLength
 	}
-
-	config, err := external.LoadDefaultAWSConfig(configs...)
-	if err != nil {
-		return aws.Config{}, err
+	if len(this.contentType) == 0 {
+		this.contentType = "application/x-www-form-urlencoded; charset=utf-8"
 	}
+	setHeader(request, "Host", request.Host) // This must be included in range of headers to sign
+	setHeader(request, "Content-Length", formatInt64(this.contentLength))
+	setHeader(request, "Content-Encoding", this.contentEncoding)
+	setHeader(request, "Content-Type", this.contentType)
+	setHeader(request, "Content-MD5", this.contentMD5)
+	setHeader(request, "If-None-Match", this.etag)
+	setHeader(request, "X-Amz-Server-Side-Encryption", string(this.serverSideEncryption))
+	setHeader(request, "X-Amz-Security-Token", this.credentials[0].SecurityToken)
+	setHeader(request, "X-Amz-Content-Sha256", hashSHA256(readAndReplaceBody(request)))
+	setHeader(request, "X-Amz-Expires", formatUnixTimeStamp(this.expireTime))
+	setHeader(request, "X-Amz-Date", timestampV4())
+}
+func (this *inputModel) buildURL() string {
+	builder := new(strings.Builder)
 
 	if len(this.endpoint) > 0 {
-		config.EndpointResolver = aws.ResolveWithEndpointURL(this.endpoint)
-	}
-
-	return config, err
-}
-
-func (this *inputModel) buildAWSRequest() (request *aws.Request) {
-	if this.method == GET {
-		request = this.buildGET()
+		builder.WriteString(this.endpoint)
 	} else {
-		request = this.buildPUT()
+		builder.WriteString("https://s3")
+		if len(this.region) > 0 && this.region != "us-east-1" {
+			builder.WriteString("-")
+			builder.WriteString(this.region)
+		}
+		builder.WriteString(".amazonaws.com")
 	}
-	request.ExpireTime = this.expireTime
-	return request
-}
 
-func (this *inputModel) buildGET() *aws.Request {
-	parameters := s3.GetObjectInput{
-		Bucket:      this.bucket,
-		Key:         this.key,
-		IfNoneMatch: this.etag,
+	if !strings.HasSuffix(builder.String(), "/") {
+		builder.WriteString("/")
 	}
-	request := this.client.GetObjectRequest(&parameters)
-	request.ExpireTime = this.expireTime
-	return request.Request
-}
-
-func (this *inputModel) buildPUT() *aws.Request {
-	parameters := s3.PutObjectInput{
-		Bucket: this.bucket,
-		Key:    this.key,
-
-		Body:            this.content,
-		ContentMD5:      this.contentMD5,
-		ContentType:     this.contentType,
-		ContentLength:   this.contentLength,
-		ContentEncoding: this.contentEncoding,
-
-		ServerSideEncryption: this.serverSideEncryption,
-	}
-	request := this.client.PutObjectRequest(&parameters)
-	request.ExpireTime = this.expireTime
-	return request.Request
+	builder.WriteString(this.bucket)
+	builder.WriteString("/")
+	builder.WriteString(this.key)
+	return builder.String()
 }
