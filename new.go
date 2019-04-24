@@ -21,8 +21,8 @@ const (
 )
 
 var (
-	ErrInvalidRequestMethod = errors.New("Invalid method.")
-	ErrBucketMissing        = errors.New("Bucket is required.")
-	ErrKeyMissing           = errors.New("Key is required.")
-	ErrContentMissing       = errors.New("Content is required.")
+	ErrInvalidRequestMethod = errors.New("invalid method")
+	ErrBucketMissing        = errors.New("bucket is required")
+	ErrKeyMissing           = errors.New("key is required")
+	ErrContentMissing       = errors.New("content is required")
 )
