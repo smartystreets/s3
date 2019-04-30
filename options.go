@@ -26,7 +26,11 @@ func Nop(_ *inputModel) {}
 // Bundle them together in a single option to leave more room for the dynamic options.
 func CompositeOption(options ...Option) Option {
 	return func(in *inputModel) {
-		in.applyOptions(options)
+		for _, option := range options {
+			if option != nil {
+				option(in)
+			}
+		}
 	}
 }
 
