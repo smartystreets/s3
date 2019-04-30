@@ -120,7 +120,11 @@ func EnvironmentCredentials() Option {
 // AmbientCredentials loads credentials first from the environment, then from any configured IAM role (on EC2).
 func AmbientCredentials() Option {
 	return func(in *inputModel) {
-		in.credentials = append(in.credentials, ambientCredentials())
+		credentials := ambientCredentials()
+		if credentials.AccessKeyID == "" || credentials.SecretAccessKey == "" {
+			return
+		}
+		in.credentials = append(in.credentials, credentials)
 	}
 }
 
