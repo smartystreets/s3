@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/smartystreets/s3.svg?branch=master)](https://travis-ci.org/smartystreets/s3)
+
 # s3
 --
     import "github.com/smartystreets/s3"
