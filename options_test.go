@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +19,11 @@ func TestOptionsFixture(t *testing.T) {
 
 type OptionsFixture struct {
 	*gunit.Fixture
+}
+
+func (this *OptionsFixture) Setup() {
+	os.Setenv(envAccessKey, "access-key")
+	os.Setenv(envSecretKey, "secret-key")
 }
 
 func (this *OptionsFixture) TestMissingMethod() {
