@@ -6,7 +6,6 @@ import (
 )
 
 type v4RequestData struct {
-	service          string
 	region           string
 	method           string
 	urlPath          string
@@ -18,25 +17,30 @@ type v4RequestData struct {
 	signedHeaders    string
 }
 
-func initializeRequestData(request *http.Request, service, region, bodyDigest string) *v4RequestData {
-	requestTimestamp := request.Header.Get("X-Amz-Date")
-	canonicalHeaders, signedHeaders := canonicalAndSignedHeaders(request.Header)
+func initializeRequestData(
+	region, method, urlPath, urlQuery, bodyDigest, timestamp string,
+	headers http.Header,
+) *v4RequestData {
+	canonicalHeaders, signedHeaders := canonicalAndSignedHeaders(headers)
 	return &v4RequestData{
-		service:          service,
 		region:           region,
-		method:           request.Method,
-		urlPath:          normalizeURI(request.URL.Path),
-		urlQuery:         normalizeQuery(request.URL.Query()),
+		method:           method,
+		urlPath:          normalizeURI(urlPath),
+		urlQuery:         normalizeQuery(urlQuery),
 		bodyDigest:       bodyDigest,
-		timestamp:        requestTimestamp,
-		date:             timestampDateV4(requestTimestamp),
+		timestamp:        timestamp,
+		date:             timestampDateV4(timestamp),
 		canonicalHeaders: canonicalHeaders,
 		signedHeaders:    signedHeaders,
 	}
 }
 
+func credentialScope(date, region string) string {
+	return join("/", date, region, s3, awsV4CredentialScopeTerminationString)
+}
+
 func (this v4RequestData) credentialScope() string {
-	return join("/", this.date, this.region, this.service, awsV4CredentialScopeTerminationString)
+	return credentialScope(this.date, this.region)
 }
 
 var utcNow = func() time.Time { return time.Now().UTC() }

@@ -141,7 +141,18 @@ func IfNoneMatch(etag string) Option {
 
 // ExpireTime specifies an expiration for the generated input.
 func ExpireTime(value time.Time) Option {
-	return func(in *inputModel) { in.expireTime = value }
+	return func(in *inputModel) {
+		in.expireTime = value
+	}
+}
+
+// ExpireSeconds specifies a duration (from the current time)
+// before the request will expires. Useful w/ NewPresignedURL
+func ExpireSeconds(seconds int) Option {
+	return func(in *inputModel) {
+		in.expireSeconds = seconds
+		in.expireTime = utcNow().Add(time.Second * time.Duration(seconds))
+	}
 }
 
 // ContentString specifies the PUT request payload from a string.

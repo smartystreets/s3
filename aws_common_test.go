@@ -1,7 +1,6 @@
 package s3
 
 import (
-	"net/url"
 	"testing"
 
 	"github.com/smartystreets/assertions/should"
@@ -49,7 +48,7 @@ func (this *CommonFixture) TestURINormalization() {
 	this.So(normalizeURI("/(foo)"), should.Equal, "/%28foo%29")
 
 	this.So(
-		normalizeQuery(url.Values{"p": []string{" +&;-=._~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"}}),
+		normalizeQuery("p= +&;-=._~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"),
 		should.Equal,
 		"p=%20%2B%26%3B-%3D._~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 }

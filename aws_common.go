@@ -116,7 +116,8 @@ func shouldEscape(c byte) bool {
 	return true
 }
 
-func normalizeQuery(v url.Values) string {
+func normalizeQuery(rawQuery string) string {
+	v, _ := url.ParseQuery(rawQuery)
 	queryString := v.Encode()
 
 	// Go encodes a space as '+' but Amazon requires '%20'. Luckily any '+' in the
