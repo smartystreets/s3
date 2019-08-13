@@ -22,8 +22,8 @@ type OptionsFixture struct {
 }
 
 func (this *OptionsFixture) Setup() {
-	os.Setenv(envAccessKey, "access-key")
-	os.Setenv(envSecretKey, "secret-key")
+	_ = os.Setenv(envAccessKey, "access-key")
+	_ = os.Setenv(envSecretKey, "secret-key")
 }
 
 func (this *OptionsFixture) TestMissingMethod() {
