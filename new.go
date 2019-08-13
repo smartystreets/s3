@@ -5,6 +5,16 @@ import (
 	"net/http"
 )
 
+func NewPresignedGet(options ...Option) (string, error) {
+	input := newInput(GET, options)
+
+	if err := input.validate(); err != nil {
+		return "", err
+	}
+
+	return NewPresigner(input).GenerateURL()
+}
+
 func NewRequest(method string, options ...Option) (*http.Request, error) {
 	input := newInput(method, options)
 
