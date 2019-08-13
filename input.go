@@ -16,6 +16,7 @@ type inputModel struct {
 	bucket   string
 	key      string
 
+	now        time.Time
 	expireTime time.Time
 	etag       string
 
@@ -29,7 +30,11 @@ type inputModel struct {
 }
 
 func newInput(method string, options []Option) *inputModel {
-	return new(inputModel).applyOptions(append(options, method_(method)))
+	options = append(options,
+		method_(method),
+		Timestamp(time.Now().UTC()),
+	)
+	return new(inputModel).applyOptions(options)
 }
 
 func (this *inputModel) applyOptions(options []Option) *inputModel {
@@ -95,7 +100,7 @@ func (this *inputModel) prepareRequestForSigning(request *http.Request) {
 	setHeader(request, "X-Amz-Security-Token", this.credentials[0].SecurityToken)
 	setHeader(request, "X-Amz-Content-Sha256", hashSHA256(readAndReplaceBody(request)))
 	setHeader(request, "X-Amz-Expires", formatUnixTimeStamp(this.expireTime))
-	setHeader(request, "X-Amz-Date", timestampV4())
+	setHeader(request, "X-Amz-Date", this.timestampV4())
 }
 func (this *inputModel) buildURL() string {
 	builder := new(strings.Builder)
@@ -119,3 +124,5 @@ func (this *inputModel) buildURL() string {
 	builder.WriteString(this.key)
 	return builder.String()
 }
+
+func (this *inputModel) timestampV4() string     { return this.now.Format(timeFormatV4) }

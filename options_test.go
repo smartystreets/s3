@@ -182,3 +182,14 @@ func (this *OptionsFixture) TestMultipleKeysAreCombinedAsPathElements() {
 	)
 	this.So(request.URL.Path, should.EndWith, "/a/b/c")
 }
+
+func (this *OptionsFixture) TestNoTimestampProvided() {
+	request, _ := NewRequest(GET, Region("r"), Bucket("b"), Key("k"), /* Timestamp(now) */)
+	this.So(request.Header.Get("X-Amz-Date"), should.Equal, time.Now().UTC().Format(timeFormatV4))
+}
+
+func (this *OptionsFixture) TestTimestamp() {
+	now := time.Now().Add(time.Minute).UTC()
+	request, _ := NewRequest(GET, Region("r"), Bucket("b"), Key("k"), Timestamp(now))
+	this.So(request.Header.Get("X-Amz-Date"), should.Equal, now.Format(timeFormatV4))
+}

@@ -195,6 +195,16 @@ func ServerSideEncryption(value ServerSideEncryptionValue) Option {
 	return func(in *inputModel) { in.serverSideEncryption = value }
 }
 
+// Timestamp specifies the timestamp to be included as the X-Amz-Date as well
+// as for use in time based calculations. Helpful for testing.
+func Timestamp(value time.Time) Option {
+	return func(in *inputModel) {
+		if in.now.IsZero() && !value.IsZero() {
+			in.now = value
+		}
+	}
+}
+
 type ServerSideEncryptionValue string
 
 const (
