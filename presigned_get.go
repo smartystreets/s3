@@ -5,16 +5,16 @@ import (
 	"net/url"
 )
 
-type Presigner struct {
+type presigner struct {
 	input *inputModel
 }
 
-func NewPresigner(input *inputModel) *Presigner {
-	return &Presigner{input: input}
+func newPresigner(input *inputModel) *presigner {
+	return &presigner{input: input}
 }
 
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
-func (this *Presigner) GenerateURL() (string, error) {
+func (this *presigner) GenerateURL() (string, error) {
 	var (
 		canonicalQuery   = this.task0_buildCanonicalQueryString()
 		canonicalRequest = this.task1_composeCanonicalRequest(canonicalQuery)
@@ -24,17 +24,17 @@ func (this *Presigner) GenerateURL() (string, error) {
 	return this.assembleURL(canonicalQuery, signature)
 }
 
-func (this *Presigner) task0_buildCanonicalQueryString() url.Values {
+func (this *presigner) task0_buildCanonicalQueryString() url.Values {
 	query := make(url.Values)
-	query.Set(HeaderAlgorithm, awsV4SignatureAlgorithm)
-	query.Set(HeaderCredential, this.input.fullCredentialScope())
-	query.Set(HeaderDate, this.input.timestampV4())
-	query.Set(HeaderExpires, this.input.expiresInSeconds())
-	query.Set(HeaderSignedHeaders, "host")
+	query.Set(headerAlgorithm, awsV4SignatureAlgorithm)
+	query.Set(headerCredential, this.input.fullCredentialScope())
+	query.Set(headerDate, this.input.timestampV4())
+	query.Set(headerExpires, this.input.expiresInSeconds())
+	query.Set(headerSignedHeaders, "host")
 	return query
 }
 
-func (this *Presigner) task1_composeCanonicalRequest(query url.Values) string {
+func (this *presigner) task1_composeCanonicalRequest(query url.Values) string {
 	return join("\n",
 		"GET",
 		"/"+this.input.key,
@@ -46,7 +46,7 @@ func (this *Presigner) task1_composeCanonicalRequest(query url.Values) string {
 	)
 }
 
-func (this *Presigner) task2_composeStringToSign(canonicalRequest string) string {
+func (this *presigner) task2_composeStringToSign(canonicalRequest string) string {
 	return join("\n",
 		awsV4SignatureAlgorithm,
 		this.input.timestampV4(),
@@ -55,7 +55,7 @@ func (this *Presigner) task2_composeStringToSign(canonicalRequest string) string
 	)
 }
 
-func (this *Presigner) task3_calculateSignature(stringToSign string) string {
+func (this *presigner) task3_calculateSignature(stringToSign string) string {
 	signingKey := []byte(awsV4SignatureInitializationString + this.input.credential().SecretAccessKey)
 	signingKey = hmacSHA256(signingKey, timestampDateV4(this.input.timestampV4()))
 	signingKey = hmacSHA256(signingKey, this.input.region)
@@ -65,10 +65,10 @@ func (this *Presigner) task3_calculateSignature(stringToSign string) string {
 	return hex.EncodeToString(signingKey)
 }
 
-func (this *Presigner) assembleURL(canonicalQuery url.Values, signature string) (string, error) {
+func (this *presigner) assembleURL(canonicalQuery url.Values, signature string) (string, error) {
 	raw := this.input.buildVirtualHostingURL() +
 		"?" + normalizeQuery(canonicalQuery) +
-		"&" + HeaderSignature +
+		"&" + headerSignature +
 		"=" + signature
 	parsed, err := url.Parse(raw)
 	if err != nil {
@@ -78,10 +78,10 @@ func (this *Presigner) assembleURL(canonicalQuery url.Values, signature string) 
 }
 
 const (
-	HeaderAlgorithm     = "X-Amz-Algorithm"
-	HeaderCredential    = "X-Amz-Credential"
-	HeaderDate          = "X-Amz-Date"
-	HeaderExpires       = "X-Amz-Expires"
-	HeaderSignedHeaders = "X-Amz-SignedHeaders"
-	HeaderSignature     = "X-Amz-Signature"
+	headerAlgorithm     = "X-Amz-Algorithm"
+	headerCredential    = "X-Amz-Credential"
+	headerDate          = "X-Amz-Date"
+	headerExpires       = "X-Amz-Expires"
+	headerSignedHeaders = "X-Amz-SignedHeaders"
+	headerSignature     = "X-Amz-Signature"
 )

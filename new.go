@@ -12,7 +12,7 @@ func NewPresignedGet(options ...Option) (string, error) {
 		return "", err
 	}
 
-	return NewPresigner(input).GenerateURL()
+	return newPresigner(input).GenerateURL()
 }
 
 func NewRequest(method string, options ...Option) (*http.Request, error) {
