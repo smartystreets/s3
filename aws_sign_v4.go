@@ -3,10 +3,11 @@ package s3
 import (
 	"encoding/hex"
 	"fmt"
+	"net/http"
 )
 
-func calculateAWSv4Signature(data *v4RequestData, credentials awsCredentials) string {
-	signer := newV4Signer(data, credentials)
+func calculateAWSv4Signature(region string, request *http.Request, credentials awsCredentials) string {
+	signer := newV4Signer("s3", region, request.Header.Get("X-Amz-Content-Sha256"), request, credentials)
 	signature := signer.calculateSignature()
 	return signature.task4_AuthorizationHeader
 }
@@ -16,10 +17,10 @@ type v4Signer struct {
 	data *v4RequestData
 }
 
-func newV4Signer(data *v4RequestData, credentials awsCredentials) *v4Signer {
+func newV4Signer(service, region, bodyDigest string, request *http.Request, credentials awsCredentials) *v4Signer {
 	return &v4Signer{
 		keys: credentials,
-		data: data,
+		data: initializeRequestData(request, service, region, bodyDigest),
 	}
 }
 
@@ -70,7 +71,7 @@ func (this *v4Signer) task3_IntermediateSignature(stringToSign string) string {
 	signingKey := []byte(awsV4SignatureInitializationString + this.keys.SecretAccessKey)
 	signingKey = hmacSHA256(signingKey, this.data.date)
 	signingKey = hmacSHA256(signingKey, this.data.region)
-	signingKey = hmacSHA256(signingKey, s3)
+	signingKey = hmacSHA256(signingKey, this.data.service)
 	signingKey = hmacSHA256(signingKey, awsV4CredentialScopeTerminationString)
 	signingKey = hmacSHA256(signingKey, stringToSign)
 	return hex.EncodeToString(signingKey)
@@ -88,8 +89,6 @@ func (this *v4Signer) task4_AuthorizationHeader(signature string) string {
 }
 
 const (
-	s3 = "s3"
-
 	awsV4SignatureInitializationString    = "AWS4"
 	awsV4CredentialScopeTerminationString = "aws4_request"
 	awsV4SignatureAlgorithm               = "AWS4-HMAC-SHA256"

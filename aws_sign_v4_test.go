@@ -50,13 +50,7 @@ func (this *V4SignerFixture) TestAWSSignatureVersion4() {
 
 func (this *V4SignerFixture) runTestCase(test *V4SignerTestCase) {
 	request, bodyDigest := test.buildRequest()
-	data := initializeRequestData(
-		"service", "us-east-1", request.Method,
-		request.URL.Path, request.URL.RawQuery,
-		bodyDigest, "TODO", // TODO: timestamp?
-		request.Header,
-	)
-	signature := newV4Signer(data, this.credentials).calculateSignature()
+	signature := newV4Signer("service", "us-east-1", bodyDigest, request, this.credentials).calculateSignature()
 
 	this.So(signature.task1_CanonicalRequest, should.Equal, test.ExpectedCanonicalRequest)
 	this.So(signature.task2_StringToSign, should.Equal, test.ExpectedStringToSign)

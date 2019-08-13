@@ -3,7 +3,6 @@ package s3
 import (
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -17,9 +16,8 @@ type inputModel struct {
 	bucket   string
 	key      string
 
-	expireSeconds int
-	expireTime    time.Time
-	etag          string
+	expireTime time.Time
+	etag       string
 
 	content         io.ReadSeeker
 	contentType     string
@@ -66,19 +64,13 @@ func (this *inputModel) validate() error {
 }
 
 func (this *inputModel) buildAndSignRequest() (request *http.Request, err error) {
-	request, err = http.NewRequest(this.method, this.buildURL().String(), this.content)
+	request, err = http.NewRequest(this.method, this.buildURL(), this.content)
 	if err != nil {
 		return nil, err
 	}
 
 	this.prepareRequestForSigning(request)
-	data := initializeRequestData(
-		this.region, request.Method,
-		request.URL.Path, request.URL.RawQuery,
-		request.Header.Get("X-Amz-Content-Sha256"),
-		timestampV4(), request.Header,
-	)
-	signature := calculateAWSv4Signature(data, this.credentials[0])
+	signature := calculateAWSv4Signature(this.region, request, this.credentials[0])
 	request.Header.Set("Authorization", signature)
 	return request, nil
 }
@@ -105,7 +97,7 @@ func (this *inputModel) prepareRequestForSigning(request *http.Request) {
 	setHeader(request, "X-Amz-Expires", formatUnixTimeStamp(this.expireTime))
 	setHeader(request, "X-Amz-Date", timestampV4())
 }
-func (this *inputModel) buildURL() *url.URL {
+func (this *inputModel) buildURL() string {
 	builder := new(strings.Builder)
 
 	if len(this.endpoint) > 0 {
@@ -125,6 +117,5 @@ func (this *inputModel) buildURL() *url.URL {
 	builder.WriteString(this.bucket)
 	builder.WriteString("/")
 	builder.WriteString(this.key)
-	parsed, _ := url.Parse(builder.String())
-	return parsed
+	return builder.String()
 }
