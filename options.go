@@ -144,6 +144,11 @@ func ExpireTime(value time.Time) Option {
 	return func(in *inputModel) { in.expireTime = value }
 }
 
+// ExpiresIn specifies a validity period for PresignedGet (only).
+func ExpiresIn(value time.Duration) Option {
+	return func(in *inputModel) { in.expiresIn = value }
+}
+
 // ContentString specifies the PUT request payload from a string.
 func ContentString(value string) Option {
 	return func(in *inputModel) {
@@ -193,6 +198,12 @@ func ContentEncoding(value string) Option {
 // This option only applies to SignedPutRequest.
 func ServerSideEncryption(value ServerSideEncryptionValue) Option {
 	return func(in *inputModel) { in.serverSideEncryption = value }
+}
+
+// Timestamp specifies the timestamp to be included as the X-Amz-Date as well
+// as for use in time based calculations. Helpful for testing.
+func Timestamp(value time.Time) Option {
+	return func(in *inputModel) { in.now = value }
 }
 
 type ServerSideEncryptionValue string

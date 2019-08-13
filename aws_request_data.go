@@ -2,7 +2,6 @@ package s3
 
 import (
 	"net/http"
-	"time"
 )
 
 type v4RequestData struct {
@@ -39,9 +38,6 @@ func (this v4RequestData) credentialScope() string {
 	return join("/", this.date, this.region, this.service, awsV4CredentialScopeTerminationString)
 }
 
-var utcNow = func() time.Time { return time.Now().UTC() }
-
-func timestampV4() string                     { return utcNow().Format(timeFormatV4) }
 func timestampDateV4(timestamp string) string { return timestamp[:8] }
 
 const timeFormatV4 = "20060102T150405Z"

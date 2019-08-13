@@ -22,8 +22,8 @@ type OptionsFixture struct {
 }
 
 func (this *OptionsFixture) Setup() {
-	os.Setenv(envAccessKey, "access-key")
-	os.Setenv(envSecretKey, "secret-key")
+	_ = os.Setenv(envAccessKey, "access-key")
+	_ = os.Setenv(envSecretKey, "secret-key")
 }
 
 func (this *OptionsFixture) TestMissingMethod() {
@@ -181,4 +181,15 @@ func (this *OptionsFixture) TestMultipleKeysAreCombinedAsPathElements() {
 		Key("/c/"),
 	)
 	this.So(request.URL.Path, should.EndWith, "/a/b/c")
+}
+
+func (this *OptionsFixture) TestNoTimestampProvided() {
+	request, _ := NewRequest(GET, Region("r"), Bucket("b"), Key("k"), /* Timestamp(now) */)
+	this.So(request.Header.Get("X-Amz-Date"), should.Equal, time.Now().UTC().Format(timeFormatV4))
+}
+
+func (this *OptionsFixture) TestTimestamp() {
+	now := time.Now().Add(time.Minute).UTC()
+	request, _ := NewRequest(GET, Region("r"), Bucket("b"), Key("k"), Timestamp(now))
+	this.So(request.Header.Get("X-Amz-Date"), should.Equal, now.Format(timeFormatV4))
 }

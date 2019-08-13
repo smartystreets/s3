@@ -1,8 +1,10 @@
 package s3
 
 import (
+	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -16,7 +18,9 @@ type inputModel struct {
 	bucket   string
 	key      string
 
+	now        time.Time
 	expireTime time.Time
+	expiresIn  time.Duration
 	etag       string
 
 	content         io.ReadSeeker
@@ -44,6 +48,10 @@ func (this *inputModel) applyOptions(options []Option) *inputModel {
 	if len(this.region) == 0 {
 		Region("us-east-1")(this)
 	}
+	if this.now.IsZero() {
+		Timestamp(time.Now().UTC())(this)
+	}
+
 	return this
 }
 
@@ -70,7 +78,7 @@ func (this *inputModel) buildAndSignRequest() (request *http.Request, err error)
 	}
 
 	this.prepareRequestForSigning(request)
-	signature := calculateAWSv4Signature(this.region, request, this.credentials[0])
+	signature := calculateAWSv4Signature(this.region, request, this.credential())
 	request.Header.Set("Authorization", signature)
 	return request, nil
 }
@@ -92,11 +100,47 @@ func (this *inputModel) prepareRequestForSigning(request *http.Request) {
 	setHeader(request, "Content-MD5", this.contentMD5)
 	setHeader(request, "If-None-Match", this.etag)
 	setHeader(request, "X-Amz-Server-Side-Encryption", string(this.serverSideEncryption))
-	setHeader(request, "X-Amz-Security-Token", this.credentials[0].SecurityToken)
+	setHeader(request, "X-Amz-Security-Token", this.credential().SecurityToken)
 	setHeader(request, "X-Amz-Content-Sha256", hashSHA256(readAndReplaceBody(request)))
 	setHeader(request, "X-Amz-Expires", formatUnixTimeStamp(this.expireTime))
-	setHeader(request, "X-Amz-Date", timestampV4())
+	setHeader(request, "X-Amz-Date", this.timestampV4())
 }
+
+func (this *inputModel) buildVirtualHostname() string {
+	builder := new(strings.Builder)
+	builder.WriteString(this.bucket)
+	builder.WriteString(".s3")
+	if this.region != "us-east-1" {
+		builder.WriteString("-")
+		builder.WriteString(this.region)
+	}
+	builder.WriteString(".amazonaws.com")
+	return builder.String()
+}
+
+// https://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
+func (this *inputModel) buildVirtualHostingURL() string {
+	builder := new(strings.Builder)
+	if len(this.endpoint) > 0 {
+		builder.WriteString(this.endpoint)
+	} else {
+		builder.WriteString("https://")
+		builder.WriteString(this.buildVirtualHostname())
+		builder.WriteString("/")
+	}
+
+	if len(this.endpoint) > 0 {
+		if !strings.HasSuffix(builder.String(), "/") {
+			builder.WriteString("/")
+		}
+		builder.WriteString(this.bucket)
+		builder.WriteString("/")
+	}
+
+	builder.WriteString(this.key)
+	return builder.String()
+}
+
 func (this *inputModel) buildURL() string {
 	builder := new(strings.Builder)
 
@@ -118,4 +162,34 @@ func (this *inputModel) buildURL() string {
 	builder.WriteString("/")
 	builder.WriteString(this.key)
 	return builder.String()
+}
+
+func (this *inputModel) timestampV4() string {
+	return this.now.Format(timeFormatV4)
+}
+
+func (this *inputModel) expiresInSeconds() string {
+	return strconv.Itoa(int(this.expiresIn.Seconds()))
+}
+
+func (this *inputModel) fullCredentialScope() string {
+	return fmt.Sprintf("%s/%s",
+		this.credential().AccessKeyID,
+		this.credentialScope(),
+	)
+}
+
+func (this *inputModel) credential() (credentials awsCredentials) {
+	if len(this.credentials) > 0 {
+		return this.credentials[0]
+	} else {
+		return credentials
+	}
+}
+
+func (this *inputModel) credentialScope() string {
+	return fmt.Sprintf("%s/%s/%s/%s",
+		timestampDateV4(this.timestampV4()), this.region,
+		"s3", awsV4CredentialScopeTerminationString,
+	) // YYYYMMDD/us-east-1/s3/aws4_request
 }
