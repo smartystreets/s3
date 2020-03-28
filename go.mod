@@ -1,4 +1,4 @@
-module github.com/smartystreets/s3
+module github.com/jpillora/s3
 
 go 1.13
 
