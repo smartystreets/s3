@@ -56,7 +56,7 @@ func (this *inputModel) applyOptions(options []Option) *inputModel {
 }
 
 func (this *inputModel) validate() error {
-	if this.method != GET && this.method != PUT {
+	if this.method != HEAD && this.method != GET && this.method != PUT {
 		return ErrInvalidRequestMethod
 	}
 	if len(this.bucket) == 0 {
