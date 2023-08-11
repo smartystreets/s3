@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/smartystreets/assertions/should"
-	"github.com/smartystreets/gunit"
+	"github.com/smarty/assertions/should"
+	"github.com/smarty/gunit"
 )
 
 func TestOptionsFixture(t *testing.T) {
@@ -110,8 +110,9 @@ func (this *OptionsFixture) TestIfNoneMatchAddHeader() {
 }
 
 func (this *OptionsFixture) TestServerSideEncryption() {
-	put, _ := NewRequest(PUT, Bucket("bucket"), Key("key"), ContentString("hi"), ServerSideEncryption(ServerSideEncryptionAES256))
-	this.So(put.Header.Get("x-amz-server-side-encryption"), should.Equal, ServerSideEncryptionAES256)
+	crypt := ServerSideEncryptionAES256
+	put, _ := NewRequest(PUT, Bucket("bucket"), Key("key"), ContentString("hi"), ServerSideEncryption(crypt))
+	this.So(put.Header.Get("x-amz-server-side-encryption"), should.Equal, string(crypt))
 }
 
 func (this *OptionsFixture) TestContentType() {
