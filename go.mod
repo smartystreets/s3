@@ -1,6 +1,6 @@
 module github.com/smartystreets/s3
 
-go 1.17
+go 1.21
 
 require (
 	github.com/smarty/assertions v1.15.1
